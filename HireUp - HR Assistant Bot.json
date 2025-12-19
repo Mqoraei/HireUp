@@ -1,0 +1,1144 @@
+﻿{
+  "name": "HireUp HR Interview Bot - State Machine- database",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -352,
+        800
+      ],
+      "id": "b8e3156f-d204-46c8-8195-f4ee39b6d602",
+      "name": "Telegram Trigger",
+      "webhookId": "a0318aa6-40fd-4eab-b84b-be1d59fba6e3",
+      "credentials": {
+        "telegramApi": {
+          "id": "It27MHXKKCuZPNGA",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// --- CORRECTED CODE FOR SUPABASE ---\n\n// Get data from incoming Telegram message\nconst chatId = $('Telegram Trigger').item.json.message.chat.id;\nconst userMessage = $('Telegram Trigger').item.json.message.text.toLowerCase();\nconst messageTimestamp = $('Telegram Trigger').item.json.message.date; // This is a Unix timestamp in seconds\n\n// Get user state from the Supabase \"Get User State\" node\nconst userStateItems = $('Get User State').all();\n\nlet stateData = {};\nlet currentState = 'new';\nlet lastTimestamp = 0; // Unix timestamp\n\n// CORRECTED: Check if user exists. Supabase returns an array.\nif (userStateItems.length > 0) {\n  stateData = userStateItems[0].json;\n  currentState = stateData.state || 'new';\n  // CORRECTED: Convert Supabase ISO timestamp to Unix timestamp for comparison\n  if (stateData.last_user_response_timestamp) {\n    lastTimestamp = new Date(stateData.last_user_response_timestamp).getTime() / 1000;\n  }\n} else {\n  // ELSE: user does not exist in Supabase yet\n  stateData = {\n    state: 'new',\n    last_user_response_timestamp: null,  // or 0, whichever you prefer\n    // you could also initialize other fields like `position`, `answers`, etc.\n  };\n  currentState = 'new';\n  lastTimestamp = 0;\n}\n\n// Now you have `stateData`, `currentState`, and `lastTimestamp` set safely\n\n// Check for timeout (3 minutes = 180 seconds)\nconst timeDiff = messageTimestamp - lastTimestamp;\nconst isTimedOut = timeDiff > 180 && currentState !== 'new';\n\nif (isTimedOut) {\n  return {\n    action: 'timeout',\n    chatId: chatId,\n    newState: 'new',\n    timeDiffMinutes: Math.floor(timeDiff / 60)\n  };\n}\n\n// State machine logic\nswitch (currentState) {\n  case 'new':\n    return {\n      action: 'send_greeting',\n      chatId: chatId,\n      newState: 'awaiting_ready',\n      userMessage: userMessage\n    };\n\n  case 'awaiting_ready':\n    if (userMessage.includes('ready') || userMessage.includes('yes')) {\n      // NEW STATE: Ask for the position\n      return {\n        action: 'ask_position',\n        chatId: chatId,\n        newState: 'awaiting_position',\n        userMessage: userMessage\n      };\n    } else {\n      return {\n        action: 'not_ready',\n        chatId: chatId,\n        newState: 'new'\n      };\n    }\n\n  case 'awaiting_position':\n    // User has provided their position, now start HR interview\n    return {\n      action: 'start_hr_interview',\n      chatId: chatId,\n      newState: 'hr_interview',\n      position: userMessage // Store the position from the user's message\n    };\n\n  case 'hr_interview':\n    return {\n      action: 'process_hr_answer',\n      chatId: chatId,\n      newState: 'technical_interview',\n      userMessage: userMessage,\n      // CORRECTED: Get the question from the stored state data\n      hrQuestion: stateData.llm_hr_question\n    };\n\n  case 'technical_interview':\n    return {\n      action: 'process_technical_answer',\n      chatId: chatId,\n      newState: 'completed',\n      userMessage: userMessage\n    };\n\n  case 'completed':\n    return {\n      action: 'already_completed',\n      chatId: chatId,\n      newState: 'completed'\n    };\n}\n\n// Default fallback\nreturn {\n  action: 'send_greeting',\n  chatId: chatId,\n  newState: 'awaiting_ready'\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        784
+      ],
+      "id": "82474789-e58e-480d-8211-b3a1625b6f7f",
+      "name": "State Machine Logic",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "send_greeting",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "5081e2c2-0eb7-45d5-bbd0-8a7a59e66367"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a00d3197-0144-460f-8011-e859dd3d08e6",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "ask_position",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "3ecbcd52-2520-4d35-a254-12951ace5005",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "start_hr_interview",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f0f8130e-0cbf-481b-b3aa-d7e9dfcaf08e",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "process_hr_answer",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "524c0209-210d-42e4-a94e-aee2af5bbc4c",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "process_technical_answer",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f1e67faa-3089-4b79-8b88-1566f33fcd2f",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "timeout",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "797c9da0-b76a-4388-a952-5be7e93a8918",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "not_ready",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        672,
+        704
+      ],
+      "id": "a812b655-d15d-4d3c-a0fa-e0e3cd917faf",
+      "name": "Route By Action",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot{{$credentials.telegramApi.token}}/sendMessage",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $node['State Machine Logic'].json.chatId }}"
+            },
+            {
+              "name": "text",
+              "value": "=Hello and welcome! I'm HireUp, your friendly Interviewer chatbot. I'm here to guide you through the interview process, which consists of two parts: an HR interview followed by a technical interview. Consider that you have about 3 minutes to answer each question.\nWhenever you’re ready to begin, just send /ready and we’ll get started. Looking forward to it!"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1344,
+        224
+      ],
+      "id": "8a362199-cbeb-4b34-a70d-2dd6e8659f1d",
+      "name": "Send Greeting to Telegram"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tapsage.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer LLM_API_KEY_PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are HireUp, an HR interviewer chatbot. You ask and analyze candidate responses professionally, step by step. Your responsible for the HR interview part only (not technical nor greetings, and do not mention thenical or greetings). these are the details:\\n- the candidate is applying for this position: {{ $json.position }} \\n-you should ask an HR question.\\n-for example you describe a situation in company, and ask him/her what would he/she do in that situation. or ask about the strategy and methods, tools he would use. or any other HR related questions that you think is a good test for hire an employee.\\n-Remember that question should be answered and (think and type) within 3 minutes. Keep it clear and answerable in 3 minutes. please do not use markdown format.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Please ask me an HR interview question.\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1120,
+        608
+      ],
+      "id": "07edd0d9-5a09-4deb-93c7-e7cdf07dd834",
+      "name": "GPT - Generate HR Question"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot{{$credentials.telegramApi.token}}/sendMessage",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $node['State Machine Logic'].json.chatId }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $node['GPT - Generate HR Question'].json.choices[0].message.content }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1344,
+        608
+      ],
+      "id": "9fe47e25-024f-4ddc-b86f-0a194c7d2944",
+      "name": "Send HR Question to Telegram"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tapsage.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer LLM_API_KEY_PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are HireUp, a technical interviewer. The HR interview is complete. Now ask ONE technical question appropriate for the role :{{ $('Get User State').item.json.position }} . This could be about problem-solving, coding logic, system design, or technical knowledge. Keep it clear and answerable in 3 minutes.plese do not use markdown format.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"The candidate's HR answer was:{{ $('Telegram Trigger').item.json.message.text }} . Now ask a technical question.\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1136,
+        976
+      ],
+      "id": "23a6873d-c8ca-4433-a225-849ff5234a5d",
+      "name": "GPT - Generate Technical Question"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot{{$credentials.telegramApi.token}}/sendMessage",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $node['State Machine Logic'].json.chatId }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $node['GPT - Generate Technical Question'].json.choices[0].message.content }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1328,
+        960
+      ],
+      "id": "714e8442-2735-4007-9f78-65782b87835a",
+      "name": "Send Technical Question to Telegram"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot{{$credentials.telegramApi.token}}/sendMessage",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $node['State Machine Logic'].json.chatId }}"
+            },
+            {
+              "name": "text",
+              "value": "=Thank you for completing the interview!\n\nNow I give you some advise to improve your skills.{{ $json.choices[0].message.content }}\n\nYour responses have been recorded and will be sent to HR group. We will review them and get back to you soon. Good luck! "
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1792,
+        1184
+      ],
+      "id": "78cb82ca-f805-4ae1-be16-c5b6ba7582fd",
+      "name": "Send Completion Message"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node['State Machine Logic'].json.chatId }}",
+        "text": "=Due to inactivity, your session has timed out ({{ $node['State Machine Logic'].json.timeDiffMinutes }} minutes). Please send /start to begin again.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1248,
+        1504
+      ],
+      "id": "afd515d0-736b-4f00-916d-1abc1c539fce",
+      "name": "Send Timeout Message",
+      "webhookId": "47ae885a-37d9-4bec-8f27-86095add4647",
+      "credentials": {
+        "telegramApi": {
+          "id": "It27MHXKKCuZPNGA",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node['State Machine Logic'].json.chatId }}",
+        "text": "No problem! Take your time. When you're ready to start the interview, just start again.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1296,
+        1664
+      ],
+      "id": "bafaa88a-e712-418e-b7c0-6e08938f85ec",
+      "name": "Send Not Ready Message",
+      "webhookId": "9f5f66e7-cb30-410b-9587-59edf13d09a5",
+      "credentials": {
+        "telegramApi": {
+          "id": "It27MHXKKCuZPNGA",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tapsage.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer LLM_API_KEY_PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are HireUp, an HR interviewer chatbot. You are responsible for scoring the HR interview part only (not technical or greeting, and you must not ask anything again). You asked this HR interview question:{{ $('Get User State').item.json.llm_hr_question }} . The user's answer was: {{ $('Telegram Trigger').item.json.message.text }}. Analyze the candidate's response professionally and objectively based on the question you asked, step-by-step. Then assign a numeric score out of 10 and clearly justify the score. Just remember it's a one turn question answering, so do NOT look for follow up or asking more details or specification. please do not markdown format\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Please score this HR interview answer.\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1200,
+        768
+      ],
+      "id": "104fb3ad-573b-460d-819a-727cc774dd56",
+      "name": "GPT - Evaluate HR Answer"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tapsage.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer LLM_API_KEY_PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are HireUp, an Technical interviewer chatbot. You are responsible for scoring the Technical interview part only (not HR specific questions or greeting, and you must not ask anything again). You asked this Technical interview question in last step:{{ $('Get User State').item.json.llm_technical_question }} . The user's answer was: {{ $('Telegram Trigger').item.json.message.text }}. Analyze the candidate's response professionally and objectively based on the question you asked, step-by-step. Then assign a numeric score out of 10 and clearly justify the score. please do ot use markdown format\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Please score this Technical interview answer.\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1248,
+        1120
+      ],
+      "id": "0ba811c1-15f4-4974-adf0-e4abc8a45187",
+      "name": "GPT - Evaluate Technical Answer"
+    },
+    {
+      "parameters": {
+        "sendTo": "hireup.proj@gmail.com",
+        "subject": "=Interview Results for user:{{ $('Get Complete Interview Results').item.json.name }}, chat ID:{{ $('Get Complete Interview Results').item.json.chat_id }} ",
+        "emailType": "text",
+        "message": "=Hi dear HR group\nThis is the the final result for the {{ $('Get Complete Interview Results').item.json.name }} interview for the role of {{ $('Get Complete Interview Results').item.json.position }}:\n\n1- HR Question: {{ $('Get Complete Interview Results').item.json.llm_hr_question }}\n\n2- User HR Answer: {{ $('Get Complete Interview Results').item.json.user_hr_answer }}\n\n3- HireUp HR Analysis: {{ $('Get Complete Interview Results').item.json.llm_hr_score }}\n\n4- Technical Question: {{ $('Get Complete Interview Results').item.json.llm_technical_question }}\n\n5- User Technical Answer: {{ $('Get Complete Interview Results').item.json.user_technical_answer }}\n\n6- HireUp Technical Analysis: {{ $('Get Complete Interview Results').item.json.llm_technical_score }} \n\nThank you for choosing us.\nHireUp",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2016,
+        1184
+      ],
+      "id": "6860042f-bb74-40c5-87d3-d75ea90396c6",
+      "name": "Send a message",
+      "webhookId": "e89919eb-70f7-4cac-b4b1-e791957fece4",
+      "alwaysOutputData": false,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GOOGLE_OAUTH_ID",
+          "name": "GOOGLE_OAUTH_PLACEHOLDER"
+}        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tapsage.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer LLM_API_KEY_PLACEHOLDER"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n\"model\": \"gpt-4o-mini\",\n\"messages\": [\n{\n\"role\": \"system\",\n\"content\": $json.analysis\n},\n{\n\"role\": \"user\",\n\"content\": \"Please give short advice to the candidate.\"\n}\n]\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1568,
+        1184
+      ],
+      "id": "183bdd26-1414-4326-9755-8ec7e0380e13",
+      "name": "GPT - FeedBack giver"
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = $input.all().map(item => {\n  return {\n    json: {\n      analysis:\n        \"You are HireUp, an Interviewer chatbot. You are responsible for giving the interviewer some advice to help them know their strengths and weaknesses and improve them. You asked this HR interview question: \" + item.json['LLM HR Question']\n        + \", and the user's HR answer was: \" + item.json['User HR Answer']\n        + \". Your HR analysis was: \" + item.json['LLM HR Score']\n        + \". The technical question was: \" + item.json['LLM Technical Question']\n        + \", the user's technical answer was: \" + item.json['User Technical Answer']\n        + \", and your technical analysis was: \" + item.json['LLM Technical Score']\n        + \". Analyze your scoring professionally and objectively based on the QAs, step-by-step. Then guide them very briefly on how to become more professional.do not use thing like sure, certainly and,.. at the beginig of your response. do not use markdown format\"\n    }\n  };\n});\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        1344
+      ],
+      "id": "549f64e3-7a54-40d5-bbfc-55ccb0a555c3",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot{{$credentials.telegramApi.token}}/sendMessage",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $node['State Machine Logic'].json.chatId }}"
+            },
+            {
+              "name": "text",
+              "value": "First of all, tell me for which position you are applying."
+            },
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1344,
+        416
+      ],
+      "id": "306f2f90-96e1-43e9-82b7-ee033e8ca96d",
+      "name": "Ask Position"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "interviews",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "keyValue": "={{ $json.message.chat.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        800
+      ],
+      "id": "ccc1f7c4-99d1-4db8-bbfa-809203c980e3",
+      "name": "Get User State",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "SUPABASE_CREDENTIAL_ID",
+          "name": "SUPABASE_CREDENTIAL_PLACEHOLDER"
+}        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "interviews",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "chat_id",
+              "fieldValue": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+            },
+            {
+              "fieldId": "state",
+              "fieldValue": "={{ $node['State Machine Logic'].json.newState }}"
+            },
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $('Telegram Trigger').item.json.message.from.username || $('Telegram Trigger').item.json.message.from.first_name }}"
+            },
+            {
+              "fieldId": "position",
+              "fieldValue": "={{ $node['State Machine Logic'].json.newState === 'hr_interview'     ? $node['Telegram Trigger'].json.message.text     :$('Get User State').item.json.position  }}"
+            },
+            {
+              "fieldId": "last_user_response_timestamp",
+              "fieldValue": "={{ new Date($('Telegram Trigger').item.json.message.date * 1000).toISOString() }}"
+            },
+            {
+              "fieldId": "last_llm_timestamp",
+              "fieldValue": "={{ new Date().toISOString() }}"
+            },
+            {
+              "fieldId": "llm_hr_question",
+              "fieldValue": "={{ $node['State Machine Logic'].json.newState === 'hr_interview' ? $node['GPT - Generate HR Question'].json.choices[0].message.content : ($('Get User State').item.json.llm_hr_question || null) }}"
+            },
+            {
+              "fieldId": "user_hr_answer",
+              "fieldValue": "={{ $node['State Machine Logic'].json.newState === 'technical_interview' ? $('Telegram Trigger').item.json.message.text : ($('Get User State').item.json.user_hr_answer || null) }}"
+            },
+            {
+              "fieldId": "llm_hr_score",
+              "fieldValue": "={{ $('GPT - Evaluate HR Answer').isExecuted ? $node['GPT - Evaluate HR Answer'].json.choices[0].message.content : ($('Get User State').item.json.llm_hr_score || null) }}"
+            },
+            {
+              "fieldId": "llm_technical_question",
+              "fieldValue": "={{ $('GPT - Generate Technical Question').isExecuted ? $node['GPT - Generate Technical Question'].json.choices[0].message.content : ($('Get User State').item.json.llm_technical_question || null) }}"
+            },
+            {
+              "fieldId": "user_technical_answer",
+              "fieldValue": "={{ $if($node['State Machine Logic'].json.newState === 'completed', $node['Telegram Trigger'].json.message.text, null) }}"
+            },
+            {
+              "fieldId": "llm_technical_score",
+              "fieldValue": "={{ $('GPT - Evaluate Technical Answer').isExecuted ? $('GPT - Evaluate Technical Answer').item.json.choices[0].message.content : ($('Get User State').item.json.llm_technical_score || null) }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1568,
+        880
+      ],
+      "id": "0b5e1b82-4b0f-41b0-8fe5-5f04f0b341d5",
+      "name": "Update a row",
+      "alwaysOutputData": false,
+      "credentials": {
+        "supabaseApi": {
+          "id": "SUPABASE_CREDENTIAL_ID",
+          "name": "SUPABASE_CREDENTIAL_PLACEHOLDER"
+}        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": "interviews",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "keyValue": "={{ $('Get User State').item.json.chat_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        1328
+      ],
+      "id": "5fa497a4-6ff1-4d97-8b32-483bd98d594b",
+      "name": "Get Complete Interview Results",
+      "credentials": {
+        "supabaseApi": {
+        "id": "SUPABASE_CREDENTIAL_ID",
+        "name": "SUPABASE_CREDENTIAL_PLACEHOLDER"
+}
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "interviews",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Send Completion Message').item.json.result.chat.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2464,
+        1184
+      ],
+      "id": "9cb6b39c-1d36-4de3-a405-4fc3e985b7c0",
+      "name": "Delete rows or columns from sheet",
+      "credentials": {
+        "supabaseApi": {
+          "id": "SUPABASE_CREDENTIAL_ID",
+          "name": "SUPABASE_CREDENTIAL_PLACEHOLDER"
+}        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "22507a0d-8d43-44e7-89c4-4f43767852f4",
+              "leftValue": "={{ $json.created_at }}",
+              "rightValue": "={{0}}",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {
+          "ignoreCase": false
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        128,
+        800
+      ],
+      "id": "cf2743ae-7960-49a4-82c5-359d15c27c13",
+      "name": "IF - Is New User?",
+      "alwaysOutputData": false,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "tableId": "interviews",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "chat_id",
+              "fieldValue": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        256,
+        672
+      ],
+      "id": "03b49c25-b6fd-414d-9300-9365df6cb657",
+      "name": "Create New User",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "SUPABASE_CREDENTIAL_ID",
+          "name": "SUPABASE_CREDENTIAL_PLACEHOLDER"
+}
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get User State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "State Machine Logic": {
+      "main": [
+        [
+          {
+            "node": "Route By Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route By Action": {
+      "main": [
+        [
+          {
+            "node": "Send Greeting to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ask Position",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GPT - Generate HR Question",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GPT - Evaluate HR Answer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GPT - Evaluate Technical Answer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Timeout Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Not Ready Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Greeting to Telegram": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT - Generate HR Question": {
+      "main": [
+        [
+          {
+            "node": "Send HR Question to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send HR Question to Telegram": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT - Generate Technical Question": {
+      "main": [
+        [
+          {
+            "node": "Send Technical Question to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Technical Question to Telegram": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Completion Message": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Timeout Message": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Not Ready Message": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT - Evaluate HR Answer": {
+      "main": [
+        [
+          {
+            "node": "GPT - Generate Technical Question",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT - Evaluate Technical Answer": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Complete Interview Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Delete rows or columns from sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT - FeedBack giver": {
+      "main": [
+        [
+          {
+            "node": "Send Completion Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "GPT - FeedBack giver",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask Position": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get User State": {
+      "main": [
+        [
+          {
+            "node": "IF - Is New User?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Complete Interview Results": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Is New User?": {
+      "main": [
+        [
+          {
+            "node": "Create New User",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "State Machine Logic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create New User": {
+      "main": [
+        [
+          {
+            "node": "State Machine Logic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "936ac9a7-7ab0-471b-b4a7-58c352097df6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9c59c45cf0803339c2c976259e4c15e26afaf6dbce23397087073005f181c74b"
+  },
+  "id": "pWvT21cr2j6qs9FM",
+  "tags": []
+}
