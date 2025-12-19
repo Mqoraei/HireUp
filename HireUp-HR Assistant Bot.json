@@ -1,5 +1,5 @@
 ﻿{
-  "name": "HireUp HR Interview Bot - State Machine- database",
+  "name": "HireUp HR Assistant Bot",
   "nodes": [
     {
       "parameters": {
@@ -1142,3 +1142,4 @@
   "id": "pWvT21cr2j6qs9FM",
   "tags": []
 }
+
