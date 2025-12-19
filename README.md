@@ -1,4 +1,4 @@
-HireUp – AI-Powered Initial Candidate Screening
+###HireUp – AI-Powered Initial Candidate Screening
 
 HireUp is an AI-driven pre-interview screening system designed to automate and improve the initial assessment of candidates before human interviews begin.
 
