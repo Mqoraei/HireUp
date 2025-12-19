@@ -44,9 +44,9 @@ For each candidate, the system:
 - **Explainable evaluation:** written analysis + numeric scoring  
 - **Human-in-the-loop:** AI assists decisions, not replaces HR judgment  
 
----
 
-## 🏗️ System Overview
+
+## System Overview
 
 | Component | Role |
 |------------|------|
@@ -56,9 +56,9 @@ For each candidate, the system:
 | **Supabase** | Persistent session state & data storage |
 | **Email (OAuth)** | Delivery of screening reports to HR |
 
----
 
-## 🔐 Security & Credentials
+
+## Security & Credentials
 
 This repository contains a **sanitized workflow export** intended for public sharing.  
 All sensitive credentials (API keys, OAuth tokens, service secrets) have been **removed** and replaced with **clear placeholders** in the JSON file.
