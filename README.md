@@ -4,7 +4,6 @@
 
 This repository contains the **sanitized workflow export** of HireUp, implemented as a **state-machine orchestrated system** using **n8n**, powered by **LLMs**, and delivered through a **Telegram bot** for fast, low-friction validation.
 
----
 
 ## 🚩 What Problem HireUp Solves
 
