@@ -1,76 +1,69 @@
 # HireUp – AI-Powered Initial Candidate Screening
 
-HireUp is an AI-driven pre-interview screening system designed to automate and improve the initial assessment of candidates before human interviews begin.
+**HireUp** is an AI-driven **pre‑interview screening system** designed to automate and enhance the **initial candidate assessment** process — before human interviews begin.  
 
-This repository contains the sanitized workflow export of HireUp, implemented as a state-machine-based system orchestrated with n8n, powered by LLMs, and delivered through a Telegram bot interface for fast, low-friction validation.
+This repository contains the **sanitized workflow export** of HireUp, implemented as a **state-machine orchestrated system** using **n8n**, powered by **LLMs**, and delivered through a **Telegram bot** for fast, low-friction validation.
 
-What Problem HireUp Solves
+---
+
+## 🚩 What Problem HireUp Solves
 
 HR teams spend a disproportionate amount of time on early-stage screening:
 
-Reviewing large volumes of irrelevant or inflated resumes
+- Reviewing large volumes of irrelevant or inflated résumés  
+- Handling unstructured CV formats  
+- Running repetitive, low-signal initial calls  
 
-Handling unstructured CVs
+These pain points lead to **slow hiring**, **inefficient shortlisting**, and **HR fatigue**.  
+HireUp focuses **exclusively** on removing this bottleneck.
 
-Running repetitive, low-signal initial calls
+---
 
-This results in slow hiring, poor shortlists, and HR fatigue.
+## ⚙️ What HireUp Does
 
-HireUp focuses exclusively on this bottleneck.
+HireUp runs a **short, structured, time-bounded screening** between résumé collection and in-person interviews.
 
-What HireUp Does
+For each candidate, the system:
 
-HireUp runs a short, structured, time-bounded screening after resume collection and before in person interviews.
+1. Collects the **target job role**  
+2. Asks one **HR (behavioral/situational)** question  
+3. Evaluates the HR response using an **LLM**  
+4. Asks one **role-specific technical** question  
+5. Evaluates the technical response  
+6. Produces **explainable scores (1–10)** and a **decision-ready summary** for HR  
 
-For each candidate, it:
+> 💬 *This is screening, not interviewing.*
 
-Collects the target job role
+---
 
-Asks one HR (behavioral/situational) question
+## 🧩 Core Design Principles
 
-Evaluates the HR response using an LLM
+- **State-machine driven:** deterministic flow, no skipped steps  
+- **Time-controlled:** strict response windows with automatic timeouts  
+- **Role-aware prompting:** questions adapt to the position applied for  
+- **Explainable evaluation:** written analysis + numeric scoring  
+- **Human-in-the-loop:** AI assists decisions, not replaces HR judgment  
 
-Asks one role-specific technical question
+---
 
-Evaluates the technical response
+## 🏗️ System Overview
 
-Produces explainable scores (1–10) and a decision-ready summary for HR
+| Component | Role |
+|------------|------|
+| **Telegram** | Candidate interface |
+| **n8n** | Workflow orchestration & state management |
+| **LLM (OpenAI-compatible)** | Question generation & evaluation |
+| **Supabase** | Persistent session state & data storage |
+| **Email (OAuth)** | Delivery of screening reports to HR |
 
-This is screening, not interviewing.
+---
 
-Core Design Principles
+## 🔐 Security & Credentials
 
-State-machine driven: deterministic flow, no skipped steps
+This repository contains a **sanitized workflow export** intended for public sharing.  
+All sensitive credentials (API keys, OAuth tokens, service secrets) have been **removed** and replaced with **clear placeholders** in the JSON file.
 
-Time-controlled: strict response windows, automatic timeouts
-
-Role-aware prompting: questions adapt to the applied position
-
-Explainable evaluation: written analysis + numeric scores
-
-Human-in-the-loop: AI assists decisions, does not replace HR
-
-System Overview
-
-Telegram – Candidate interface
-
-n8n – Orchestration & state machine
-
-LLM (OpenAI-compatible) – Question generation & evaluation
-
-Supabase – Persistent session state and storage
-
-Email (OAuth) – Delivery of screening reports to HR
-
-
-
-Security & Credentials
-
-This repository contains a sanitized workflow export intended for public sharing.
-
-All sensitive credentials (API keys, OAuth tokens, service secrets) have been manually removed from the workflow and replaced with clear placeholders inside the JSON file.
-
-Examples of placeholders used:
+**Example placeholders:**
 
 SUPABASE_CREDENTIAL_PLACEHOLDER
 
