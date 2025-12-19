@@ -5,7 +5,8 @@
 This repository contains the **sanitized workflow export** of HireUp, implemented as a **state-machine orchestrated system** using **n8n**, powered by **LLMs**, and delivered through a **Telegram bot** for fast, low-friction validation.
 
 
-## 🚩 What Problem HireUp Solves
+
+## What Problem HireUp Solves
 
 HR teams spend a disproportionate amount of time on early-stage screening:
 
@@ -16,9 +17,9 @@ HR teams spend a disproportionate amount of time on early-stage screening:
 These pain points lead to **slow hiring**, **inefficient shortlisting**, and **HR fatigue**.  
 HireUp focuses **exclusively** on removing this bottleneck.
 
----
 
-## ⚙️ What HireUp Does
+
+## What HireUp Does
 
 HireUp runs a **short, structured, time-bounded screening** between résumé collection and in-person interviews.
 
@@ -31,11 +32,11 @@ For each candidate, the system:
 5. Evaluates the technical response  
 6. Produces **explainable scores (1–10)** and a **decision-ready summary** for HR  
 
-> 💬 *This is screening, not interviewing.*
 
----
 
-## 🧩 Core Design Principles
+
+
+## Core Design Principles
 
 - **State-machine driven:** deterministic flow, no skipped steps  
 - **Time-controlled:** strict response windows with automatic timeouts  
@@ -72,19 +73,5 @@ LLM_API_KEY
 
 TELEGRAM_BOT_TOKEN
 
-These placeholders indicate where real credentials must be configured locally in n8n before execution.
-
-No real API keys, tokens, or personal accounts are included in this repository.
-
-Why This Project Matters
-
-HireUp demonstrates:
-
-Applied LLM system design (not prompt-only usage)
-
-Explicit state and session management
-
-Production-aware handling of time, memory, and security
-
-Focus on real, validated HR pain points
-
+> Replace these placeholders with real credentials in your local n8n configuration before execution.  
+> No actual API keys, tokens, or private accounts are included in this repository
